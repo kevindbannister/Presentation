@@ -114,7 +114,7 @@ function renderWorkspace() {
     design.style.background = slide.background;
     $("stage-frame").style.aspectRatio = slide.width + " / " + slide.height;
     $("stage-ratio").textContent = slide.width > slide.height ? "LANDSCAPE" : "PORTRAIT";
-    $("notes-editor").value = slide.notes || "";\n    $("slide-layout").value = slide.layout || "auto";\n    $("slide-layout").disabled = false;\n    $("save-notes").disabled = !state.notesKey;\n    $("notes-save-status").textContent = "From PowerPoint";
+    $("notes-editor").value = slide.notes || "";\n    $("slide-layout").value = slide.layout || "auto";\n    $("slide-layout").disabled = false;\n    $("save-notes").disabled = !state.notesKey;\n    $("notes-save-status").textContent = slide.notesEdited ? (slide.notesSaved ? "Saved in this browser" : "Unsaved changes") : "From PowerPoint";
     renderActions(slide);
     const next = state.slides[state.active + 1];
     $("next-label").textContent = next ? "Slide " + (state.active + 2) : "—";
@@ -367,6 +367,7 @@ function saveNotesToBrowser() {
   if (!state.notesKey) return;
   try {
     localStorage.setItem(state.notesKey, JSON.stringify(state.slides.map((slide) => ({ notes: slide.notes || "", layout: slide.layout || "auto" }))));
+    state.slides.forEach((slide) => { slide.notesSaved = true; slide.notesEdited = false; });
     $("notes-save-status").textContent = "Saved in this browser";
     toast("Speaker notes saved");
   } catch (_) {
@@ -391,7 +392,7 @@ function setSlideLayout(layout) {
   $("close-settings").addEventListener("click", () => $("settings-modal").classList.add("hidden"));
   $("settings-modal").addEventListener("click", (event) => { if (event.target === $("settings-modal")) $("settings-modal").classList.add("hidden"); });
   $("connect-obs").addEventListener("click", connectObs);
-  $("disconnect-obs").addEventListener("click", disconnectObs);\n  $("portrait-source").addEventListener("input", saveLayoutSources);\n  $("landscape-source").addEventListener("input", saveLayoutSources);\n  $("slide-layout").addEventListener("change", (event) => setSlideLayout(event.target.value));\n  $("notes-editor").addEventListener("input", (event) => { const slide = state.slides[state.active]; if (!slide) return; slide.notes = event.target.value; slide.layout = layoutFromNotes(slide.notes); $("slide-layout").value = slide.layout; $("notes-save-status").textContent = "Unsaved changes"; $("save-notes").disabled = false; renderActions(slide); });\n  $("save-notes").addEventListener("click", saveNotesToBrowser);
+  $("disconnect-obs").addEventListener("click", disconnectObs);\n  $("portrait-source").addEventListener("input", saveLayoutSources);\n  $("landscape-source").addEventListener("input", saveLayoutSources);\n  $("slide-layout").addEventListener("change", (event) => setSlideLayout(event.target.value));\n  $("notes-editor").addEventListener("input", (event) => { const slide = state.slides[state.active]; if (!slide) return; slide.notes = event.target.value; slide.layout = layoutFromNotes(slide.notes); slide.notesEdited = true; slide.notesSaved = false; $("slide-layout").value = slide.layout; $("notes-save-status").textContent = "Unsaved changes"; $("save-notes").disabled = false; renderActions(slide); });\n  $("save-notes").addEventListener("click", saveNotesToBrowser);
   $("previous-button").addEventListener("click", () => goTo(state.active - 1, true));
   $("next-button").addEventListener("click", () => goTo(state.active + 1, true));
   $("present-button").addEventListener("click", openOutput);
