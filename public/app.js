@@ -286,6 +286,19 @@ async function importPowerPoint(file) {
     const title = (rendered.previewText || "").split(/\s+/).slice(0, 5).join(" ");
     state.slides.push({ title, html: rendered.html, background: rendered.background, width, height, notes, previewText: rendered.previewText, firstImage: rendered.firstImage });
   }
+  state.notesKey = notesStorageKey(file);
+  try {
+    const saved = JSON.parse(localStorage.getItem(state.notesKey) || "null");
+    if (Array.isArray(saved)) saved.forEach((item, index) => {
+      if (state.slides[index]) {
+        state.slides[index].notes = item.notes || "";
+        state.slides[index].layout = item.layout || layoutFromNotes(item.notes);
+        state.slides[index].notesEdited = true;
+        state.slides[index].notesSaved = true;
+      }
+    });
+  } catch (_) {}
+  state.slides.forEach((slide) => { if (!slide.layout) slide.layout = layoutFromNotes(slide.notes); });
   state.active = 0;
   $("deck-title").textContent = file.name.replace(/\.pptx$/i, "");
   renderWorkspace();
@@ -340,6 +353,7 @@ function clearShow() {
   renderWorkspace();
 }
 
+
 function notesStorageKey(file) {
   return "presentation.notes.v1:" + file.name + ":" + file.size + ":" + file.lastModified;
 }
@@ -360,7 +374,7 @@ function loadLayoutSources() {
   } catch (_) {}
 }
 function layoutFromNotes(notes) {
-  const match = String(notes || "").match(/^#layout\\s*:\\s*(portrait|landscape)\\s*$/im);
+  const match = String(notes || "").match(/^#layout\s*:\s*(portrait|landscape)\s*$/im);
   return match ? match[1].toLowerCase() : "auto";
 }
 function saveNotesToBrowser() {
@@ -378,21 +392,43 @@ function saveNotesToBrowser() {
 function setSlideLayout(layout) {
   const slide = state.slides[state.active];
   if (!slide) return;
-  const lines = String(slide.notes || "").split(/\\r?\\n/).filter((line) => !/^\\s*#layout\\s*:/i.test(line));
+  const lines = String(slide.notes || "").split(/\r?\n/).filter((line) => !/^\s*#layout\s*:/i.test(line));
   if (layout !== "auto") lines.push("#layout: " + layout);
-  slide.notes = lines.join("\\n").replace(/^\\n+|\\n+$/g, "");
+  slide.notes = lines.join("\n").replace(/^\n+|\n+$/g, "");
   slide.layout = layout;
+  slide.notesEdited = true;
+  slide.notesSaved = false;
   $("notes-editor").value = slide.notes;
   $("notes-save-status").textContent = "Unsaved changes";
+  $("save-notes").disabled = false;
   renderActions(slide);
 }
-\nfunction setup() {\n  loadLayoutSources();
+
+
+function setup() {
+  loadLayoutSources();
   wsConnect();
   $("open-settings").addEventListener("click", () => $("settings-modal").classList.remove("hidden"));
   $("close-settings").addEventListener("click", () => $("settings-modal").classList.add("hidden"));
   $("settings-modal").addEventListener("click", (event) => { if (event.target === $("settings-modal")) $("settings-modal").classList.add("hidden"); });
   $("connect-obs").addEventListener("click", connectObs);
-  $("disconnect-obs").addEventListener("click", disconnectObs);\n  $("portrait-source").addEventListener("input", saveLayoutSources);\n  $("landscape-source").addEventListener("input", saveLayoutSources);\n  $("slide-layout").addEventListener("change", (event) => setSlideLayout(event.target.value));\n  $("notes-editor").addEventListener("input", (event) => { const slide = state.slides[state.active]; if (!slide) return; slide.notes = event.target.value; slide.layout = layoutFromNotes(slide.notes); slide.notesEdited = true; slide.notesSaved = false; $("slide-layout").value = slide.layout; $("notes-save-status").textContent = "Unsaved changes"; $("save-notes").disabled = false; renderActions(slide); });\n  $("save-notes").addEventListener("click", saveNotesToBrowser);
+  $("disconnect-obs").addEventListener("click", disconnectObs);
+  $("portrait-source").addEventListener("input", saveLayoutSources);
+  $("landscape-source").addEventListener("input", saveLayoutSources);
+  $("slide-layout").addEventListener("change", (event) => setSlideLayout(event.target.value));
+  $("notes-editor").addEventListener("input", (event) => {
+    const slide = state.slides[state.active];
+    if (!slide) return;
+    slide.notes = event.target.value;
+    slide.layout = layoutFromNotes(slide.notes);
+    slide.notesEdited = true;
+    slide.notesSaved = false;
+    $("slide-layout").value = slide.layout;
+    $("notes-save-status").textContent = "Unsaved changes";
+    $("save-notes").disabled = false;
+    renderActions(slide);
+  });
+  $("save-notes").addEventListener("click", saveNotesToBrowser);
   $("previous-button").addEventListener("click", () => goTo(state.active - 1, true));
   $("next-button").addEventListener("click", () => goTo(state.active + 1, true));
   $("present-button").addEventListener("click", openOutput);
@@ -402,8 +438,9 @@ function setSlideLayout(layout) {
   $("rename-show").addEventListener("click", renameShow);
   document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => showTab(tab.dataset.tab)));
   $("copy-output").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(location.origin + "/output"); toast("OBS source URL copied"); }
-    catch (_) { toast("OBS source URL: " + location.origin + "/output"); }
+    const url = location.origin + "/output";
+    try { await navigator.clipboard.writeText(url); toast("OBS source URL copied"); }
+    catch (_) { toast("OBS source URL: " + url); }
   });
   const fileInput = $("pptx-file");
   const emptyInput = $("empty-file");
