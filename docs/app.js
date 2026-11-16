@@ -41,6 +41,7 @@ function validateCommand(line) {
   return /^#scene\s*:\s*.+$/i.test(line) || /^#source\.(show|hide)\s*:\s*.+$/i.test(line);
 }
 async function runCommands() {
+  if (STATIC_SITE) return toast("OBS actions need the local connector.");
   const slide = state.slides[state.active];
   const commands = commandsOf(slide);
   if (!commands.length) return toast("There are no OBS commands on this slide.");
@@ -293,13 +294,14 @@ async function importPowerPoint(file) {
   toast("Imported " + state.slides.length + " slides");
 }
 function openOutput() {
-  const url = location.origin + "/output";
+  const url = STATIC_SITE ? location.href.split("?")[0] + "?output=1" : location.origin + "/output";
   state.outputWindow = window.open(url, "presentationOutput");
   if (!state.outputWindow) toast("Allow pop-ups to open the presentation output.");
   setTimeout(sendSlideState, 400);
-  runCommands();
+  if (!STATIC_SITE) runCommands();
 }
 async function connectObs() {
+  if (STATIC_SITE) { $("connection-message").textContent = "This cloud version is the website preview. OBS control needs the local connector."; return; }
   const address = $("obs-address").value.trim() || "ws://127.0.0.1:4455";
   const password = $("obs-password").value;
   $("connection-message").textContent = "Connecting…";
@@ -340,7 +342,7 @@ function clearShow() {
   renderWorkspace();
 }
 function setup() {
-  wsConnect();
+  if (!STATIC_SITE) wsConnect(); else { setObsStatus(false); $("obs-status").textContent = "Cloud preview"; }
   $("open-settings").addEventListener("click", () => $("settings-modal").classList.remove("hidden"));
   $("close-settings").addEventListener("click", () => $("settings-modal").classList.add("hidden"));
   $("settings-modal").addEventListener("click", (event) => { if (event.target === $("settings-modal")) $("settings-modal").classList.add("hidden"); });
@@ -355,8 +357,9 @@ function setup() {
   $("rename-show").addEventListener("click", renameShow);
   document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => showTab(tab.dataset.tab)));
   $("copy-output").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(location.origin + "/output"); toast("OBS source URL copied"); }
-    catch (_) { toast("OBS source URL: " + location.origin + "/output"); }
+    const url = STATIC_SITE ? location.href.split("?")[0] + "?output=1" : location.origin + "/output";
+    try { await navigator.clipboard.writeText(url); toast("Preview URL copied"); }
+    catch (_) { toast("Preview URL: " + url); }
   });
   const fileInput = $("pptx-file");
   const emptyInput = $("empty-file");
@@ -378,6 +381,7 @@ function setup() {
 }
 
 function setupOutput() {
+  if (STATIC_SITE) { $("app").classList.add("output-only"); $("output-mode").classList.remove("hidden"); $("output-mode").classList.add("active"); $("output-mode").querySelector(".output-empty").textContent = "Cloud preview mode — OBS output needs the local connector."; $("output-mode").querySelector(".output-empty").classList.add("visible"); return; }
   $("app").classList.add("output-only");
   $("output-mode").classList.remove("hidden");
   $("output-mode").classList.add("active");
