@@ -1,4 +1,5 @@
-const STATIC_SITE = window.PRESENTATION_STATIC_SITE === true;\nconst state = { slides: [], active: 0, ws: null, obsConnected: false, outputWindow: null, notesKey: "" };
+const STATIC_SITE = window.PRESENTATION_STATIC_SITE === true;
+const state = { slides: [], active: 0, ws: null, obsConnected: false, outputWindow: null, notesKey: "" };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 let toastTimer;
@@ -115,7 +116,11 @@ function renderWorkspace() {
     design.style.background = slide.background;
     $("stage-frame").style.aspectRatio = slide.width + " / " + slide.height;
     $("stage-ratio").textContent = slide.width > slide.height ? "LANDSCAPE" : "PORTRAIT";
-    $("notes-editor").value = slide.notes || "";\n    $("slide-layout").value = slide.layout || "auto";\n    $("slide-layout").disabled = false;\n    $("save-notes").disabled = !state.notesKey;\n    $("notes-save-status").textContent = slide.notesEdited ? (slide.notesSaved ? "Saved in this browser" : "Unsaved changes") : "From PowerPoint";
+    $("notes-editor").value = slide.notes || "";
+    $(slide-layout").value = slide.layout || "auto";
+    $(slide-layout").disabled = false;
+    $(save-notes").disabled = !state.notesKey;
+    $(notes-save-status").textContent = slide.notesEdited ? (slide.notesSaved ? "Saved in this browser" : "Unsaved changes") : "From PowerPoint";
     renderActions(slide);
     const next = state.slides[state.active + 1];
     $("next-label").textContent = next ? "Slide " + (state.active + 2) : "—";
@@ -123,7 +128,11 @@ function renderWorkspace() {
   } else {
     $("stage-frame").style.aspectRatio = "16 / 9";
     $("stage-ratio").textContent = "16:9";
-    $("notes-editor").value = "";\n    $("slide-layout").value = "auto";\n    $("slide-layout").disabled = true;\n    $("save-notes").disabled = true;\n    $("notes-save-status").textContent = "No edits yet";
+    $("notes-editor").value = "";
+    $(slide-layout").value = "auto";
+    $(slide-layout").disabled = true;
+    $(save-notes").disabled = true;
+    $(notes-save-status").textContent = "No edits yet";
     $("next-preview").innerHTML = '<div class="next-placeholder">No next slide</div>';
     $("next-label").textContent = "—";
     renderActions(null);
