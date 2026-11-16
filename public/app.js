@@ -318,7 +318,7 @@ async function connectObs() {
   }
 }
 async function disconnectObs() {
-  try { await fetch("/api/obs/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address: "ws://127.0.0.1:1", password: "" }) }); } catch (_) {}
+  try { await fetch("/api/obs/disconnect", { method: "POST" }); } catch (_) {}
   $("connection-message").textContent = "Disconnected.";
   $("connection-message").className = "connection-message";
   setObsStatus(false);
