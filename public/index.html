@@ -62,9 +62,16 @@
             <div class="section-title"><span>UP NEXT</span><span id="next-label">—</span></div>
             <div class="next-preview" id="next-preview"><div class="next-placeholder">No next slide</div></div>
           </div>
+          <div class="inspector-section">
+            <div class="section-title"><span>SLIDE LAYOUT</span><span class="muted-label">OBS source</span></div>
+            <label class="layout-label">Orientation<select id="slide-layout"><option value="auto">Use slide ratio</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label>
+            <div class="notes-help">Landscape or portrait runs the matching source visibility actions when this slide appears.</div>
+          </div>
           <div class="inspector-section notes-section">
-            <div class="section-title"><span>SPEAKER NOTES</span><span class="muted-label">From PowerPoint</span></div>
-            <div id="notes-content" class="notes-content">Import a PowerPoint to view its slide notes.</div>
+            <div class="section-title"><span>SPEAKER NOTES</span><span class="muted-label">Editable</span></div>
+            <textarea id="notes-editor" class="notes-editor" placeholder="Add speaker notes or OBS commands starting with #"></textarea>
+            <div class="notes-help">Use one OBS command per line. Notes edits stay in this session; download a revised PowerPoint to keep them in the file.</div>
+            <div class="notes-actions"><span id="notes-save-status">No edits yet</span><button id="export-pptx" class="text-button" disabled>Download revised PowerPoint</button></div>
           </div>
           <div class="inspector-section">
             <div class="section-title"><span>OUTPUT</span><span class="live-label"><i></i> OBS source</span></div>
@@ -88,7 +95,10 @@
         <p>Presentation connects to OBS on this computer. In OBS, open <b>Tools → WebSocket Server Settings</b> and enable the server.</p>
         <label class="field-label">WebSocket address<input id="obs-address" value="ws://127.0.0.1:4455" autocomplete="off"></label>
         <label class="field-label">Server password<input id="obs-password" type="password" autocomplete="current-password" placeholder="OBS WebSocket password"></label>
-        <div class="modal-note">The password is kept in memory for this session and is not saved by the app.</div>
+        <div class="mapping-heading">PORTRAIT / LANDSCAPE SOURCES</div>
+        <label class="field-label">Portrait source<input id="portrait-source" placeholder="e.g. Portrait Frame"></label>
+        <label class="field-label">Landscape source<input id="landscape-source" placeholder="e.g. Landscape Frame"></label>
+        <div class="modal-note">Map these names to OBS sources that exist in the active scene. Password is kept in memory for this session and is not saved.</div>
         <div class="modal-actions"><button id="disconnect-obs" class="button button-quiet">Disconnect</button><button id="connect-obs" class="button button-primary">Connect OBS</button></div>
         <div id="connection-message" class="connection-message"></div>
       </div>
