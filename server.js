@@ -118,7 +118,7 @@ function connectObs(address, password) {
   });
 }
 
-async function runCommands(commands) {
+async function runCommands(commands, layouts) {
   const results = [];
   for (const raw of commands || []) {
     const line = String(raw).trim();
@@ -137,6 +137,22 @@ async function runCommands(commands) {
       if (!item) throw new Error("Source not found in current scene: " + name);
       await obsCall("SetSceneItemEnabled", { sceneName: scene.currentProgramSceneName, sceneItemId: item.sceneItemId, sceneItemEnabled: match[1].toLowerCase() === "show" });
       results.push((match[1].toLowerCase() === "show" ? "Shown: " : "Hidden: ") + name);
+      continue;
+    }
+    match = line.match(/^#layout\s*:\s*(portrait|landscape)$/i);
+    if (match) {
+      const orientation = match[1].toLowerCase();
+      const activeName = layouts && layouts[orientation];
+      const otherName = layouts && layouts[orientation === "portrait" ? "landscape" : "portrait"];
+      if (!activeName || !otherName) throw new Error("Set both Portrait source and Landscape source in OBS settings first.");
+      const scene = await obsCall("GetCurrentProgramScene");
+      const list = await obsCall("GetSceneItemList", { sceneName: scene.currentProgramSceneName });
+      const activeItem = (list.sceneItems || []).find((entry) => entry.sourceName === activeName);
+      const otherItem = (list.sceneItems || []).find((entry) => entry.sourceName === otherName);
+      if (!activeItem || !otherItem) throw new Error("Both layout sources must exist in the current OBS scene.");
+      await obsCall("SetSceneItemEnabled", { sceneName: scene.currentProgramSceneName, sceneItemId: activeItem.sceneItemId, sceneItemEnabled: true });
+      await obsCall("SetSceneItemEnabled", { sceneName: scene.currentProgramSceneName, sceneItemId: otherItem.sceneItemId, sceneItemEnabled: false });
+      results.push("Layout: " + orientation);
       continue;
     }
     if (line.startsWith("#")) throw new Error("Unsupported command: " + line);
@@ -173,7 +189,7 @@ const server = http.createServer(async (req, res) => {
     req.on("end", async () => {
       try {
         const data = JSON.parse(body || "{}");
-        const results = await runCommands(data.commands || []);
+        const results = await runCommands(data.commands || [], data.layouts || {});
         json(res, 200, { ok: true, results });
       } catch (error) { json(res, 400, { ok: false, error: error.message }); }
     });
