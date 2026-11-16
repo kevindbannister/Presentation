@@ -8,7 +8,7 @@ Presentation is a local presentation-control app for PowerPoint and OBS.
 - Preview slide text, images and basic shapes.
 - Present through an OBS Browser Source at http://127.0.0.1:5175/output.
 - Connect to OBS WebSocket to switch scenes and show or hide sources.
-- Use the app's next/previous controls or keyboard arrows. A Flic setup can call the local HTTP endpoints described below.
+- Use the app's next/previous controls or keyboard arrows. The bridge includes local next/previous endpoints for same-computer automations.
 - Stream Deck remains available for manual OBS control.
 
 ## Run locally
@@ -35,13 +35,16 @@ Multiple commands are supported. Scene and source names must match OBS. Use sour
 
 ## Flic
 
-The bridge exposes local endpoints for a Flic Hub or another local automation:
+The bridge provides local endpoints for next and previous slide commands:
 
 - GET http://127.0.0.1:5175/api/next
 - GET http://127.0.0.1:5175/api/previous
 
-They ask the presentation controller to move one slide. Configure the Flic side to call these URLs, subject to your Flic model and setup.
+They can be called by automation running on the same computer. A Flic Hub on another device cannot reach this loopback-only server yet; that needs a secured local-network connector and should be added once the Flic model and setup are confirmed.
 
 ## Scope and limitations
 
 This is an initial, local-first prototype. PPTX rendering focuses on common text, images and shapes; complex PowerPoint effects, embedded video, fonts and animations may not match PowerPoint exactly. Export a PDF or images from PowerPoint if a deck relies on effects that do not render in the prototype. OBS slide animation runs inside the Browser Source; OBS scene transitions apply when the app changes scenes.
+
+
+This first build runs locally because OBS control requires a local bridge. It is not a GitHub Pages deployment.
