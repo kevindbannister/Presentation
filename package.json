@@ -1,0 +1,16 @@
+{
+  "name": "presentation-obs-control",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first PowerPoint presentation controller for OBS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
