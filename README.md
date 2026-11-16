@@ -29,9 +29,9 @@ Put one command per line in PowerPoint speaker notes:
 
 - #scene: Scene Name
 - #source.show: Source Name
-- #source.hide: Source Name
+- #source.hide: Source Name\n- #layout: portrait\n- #layout: landscape
 
-Multiple commands are supported. Scene and source names must match OBS. Use source visibility commands to select portrait or landscape layouts, for example showing the Portrait Frame source and hiding the Landscape Frame source.
+Multiple commands are supported. Scene and source names must match OBS. The app lets you edit notes and save those edits in the browser for that PowerPoint deck. The original .pptx is not changed.\n\nFor layout switching, set the Portrait source and Landscape source names in OBS settings, then choose a layout per slide or add #layout: portrait / #layout: landscape in the notes. The app shows the selected source and hides the other in the active OBS scene.
 
 ## Flic
 
@@ -44,7 +44,7 @@ They can be called by automation running on the same computer. A Flic Hub on ano
 
 ## Scope and limitations
 
-This is an initial, local-first prototype. PPTX rendering focuses on common text, images and shapes; complex PowerPoint effects, embedded video, fonts and animations may not match PowerPoint exactly. Export a PDF or images from PowerPoint if a deck relies on effects that do not render in the prototype. OBS slide animation runs inside the Browser Source; OBS scene transitions apply when the app changes scenes.
+This is an initial, local-first prototype. Speaker-note edits are saved in the browser on the computer where you edit them and are not written back into the original PowerPoint file. PPTX rendering focuses on common text, images and shapes; complex PowerPoint effects, embedded video, fonts and animations may not match PowerPoint exactly. Export a PDF or images from PowerPoint if a deck relies on effects that do not render in the prototype. OBS slide animation runs inside the Browser Source; OBS scene transitions apply when the app changes scenes.
 
 
 This first build runs locally because OBS control requires a local bridge. It is not a GitHub Pages deployment.
