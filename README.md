@@ -48,3 +48,15 @@ This is an initial, local-first prototype. PPTX rendering focuses on common text
 
 
 This first build runs locally because OBS control requires a local bridge. It is not a GitHub Pages deployment.
+
+## Publish the cloud website preview
+
+The static website preview is in the docs folder. To publish it with GitHub Pages:
+
+1. Open this repository on GitHub and select Settings.
+2. Open Pages.
+3. Under Build and deployment, choose Deploy from a branch.
+4. Choose branch main and folder /docs, then select Save.
+5. After GitHub finishes publishing, open https://kevindbannister.github.io/Presentation/.
+
+This publishes the website interface and browser-side PowerPoint preview. The cloud preview does not connect to OBS; OBS control remains in the local app until a cloud relay and local connector are added.
