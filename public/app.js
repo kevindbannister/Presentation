@@ -1,4 +1,4 @@
-const state = { slides: [], active: 0, ws: null, obsConnected: false, outputWindow: null };
+const state = { slides: [], active: 0, ws: null, obsConnected: false, outputWindow: null, notesKey: "" };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 let toastTimer;
@@ -38,7 +38,7 @@ function commandsOf(slide) {
   return (slide && slide.notes ? slide.notes.split(/\r?\n/) : []).map((line) => line.trim()).filter((line) => line.startsWith("#"));
 }
 function validateCommand(line) {
-  return /^#scene\s*:\s*.+$/i.test(line) || /^#source\.(show|hide)\s*:\s*.+$/i.test(line);
+  return /^#scene\s*:\s*.+$/i.test(line) || /^#source\.(show|hide)\s*:\s*.+$/i.test(line) || /^#layout\s*:\s*(portrait|landscape)$/i.test(line);
 }
 async function runCommands() {
   const slide = state.slides[state.active];
@@ -46,7 +46,7 @@ async function runCommands() {
   if (!commands.length) return toast("There are no OBS commands on this slide.");
   if (!state.obsConnected) return toast("Connect to OBS before running slide commands.");
   try {
-    const response = await fetch("/api/obs/commands", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ commands }) });
+    const response = await fetch("/api/obs/commands", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ commands, layouts: currentLayoutSources() }) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "OBS command failed");
     $("action-result").textContent = result.results.join(" · ") || "Commands completed.";
@@ -114,7 +114,7 @@ function renderWorkspace() {
     design.style.background = slide.background;
     $("stage-frame").style.aspectRatio = slide.width + " / " + slide.height;
     $("stage-ratio").textContent = slide.width > slide.height ? "LANDSCAPE" : "PORTRAIT";
-    $("notes-content").textContent = slide.notes || "No speaker notes on this slide.";
+    $("notes-editor").value = slide.notes || "";\n    $("slide-layout").value = slide.layout || "auto";\n    $("slide-layout").disabled = false;\n    $("save-notes").disabled = !state.notesKey;\n    $("notes-save-status").textContent = "From PowerPoint";
     renderActions(slide);
     const next = state.slides[state.active + 1];
     $("next-label").textContent = next ? "Slide " + (state.active + 2) : "—";
@@ -122,7 +122,7 @@ function renderWorkspace() {
   } else {
     $("stage-frame").style.aspectRatio = "16 / 9";
     $("stage-ratio").textContent = "16:9";
-    $("notes-content").textContent = "Import a PowerPoint to view its slide notes.";
+    $("notes-editor").value = "";\n    $("slide-layout").value = "auto";\n    $("slide-layout").disabled = true;\n    $("save-notes").disabled = true;\n    $("notes-save-status").textContent = "No edits yet";
     $("next-preview").innerHTML = '<div class="next-placeholder">No next slide</div>';
     $("next-label").textContent = "—";
     renderActions(null);
@@ -339,13 +339,59 @@ function clearShow() {
   $("deck-title").textContent = "Untitled show";
   renderWorkspace();
 }
-function setup() {
+
+function notesStorageKey(file) {
+  return "presentation.notes.v1:" + file.name + ":" + file.size + ":" + file.lastModified;
+}
+function currentLayoutSources() {
+  return {
+    portrait: $("portrait-source") ? $("portrait-source").value.trim() : "",
+    landscape: $("landscape-source") ? $("landscape-source").value.trim() : ""
+  };
+}
+function saveLayoutSources() {
+  try { localStorage.setItem("presentation.layout-sources.v1", JSON.stringify(currentLayoutSources())); } catch (_) {}
+}
+function loadLayoutSources() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("presentation.layout-sources.v1") || "{}");
+    $("portrait-source").value = saved.portrait || "";
+    $("landscape-source").value = saved.landscape || "";
+  } catch (_) {}
+}
+function layoutFromNotes(notes) {
+  const match = String(notes || "").match(/^#layout\\s*:\\s*(portrait|landscape)\\s*$/im);
+  return match ? match[1].toLowerCase() : "auto";
+}
+function saveNotesToBrowser() {
+  if (!state.notesKey) return;
+  try {
+    localStorage.setItem(state.notesKey, JSON.stringify(state.slides.map((slide) => ({ notes: slide.notes || "", layout: slide.layout || "auto" }))));
+    $("notes-save-status").textContent = "Saved in this browser";
+    toast("Speaker notes saved");
+  } catch (_) {
+    $("notes-save-status").textContent = "Could not save notes";
+    toast("Browser storage is full");
+  }
+}
+function setSlideLayout(layout) {
+  const slide = state.slides[state.active];
+  if (!slide) return;
+  const lines = String(slide.notes || "").split(/\\r?\\n/).filter((line) => !/^\\s*#layout\\s*:/i.test(line));
+  if (layout !== "auto") lines.push("#layout: " + layout);
+  slide.notes = lines.join("\\n").replace(/^\\n+|\\n+$/g, "");
+  slide.layout = layout;
+  $("notes-editor").value = slide.notes;
+  $("notes-save-status").textContent = "Unsaved changes";
+  renderActions(slide);
+}
+\nfunction setup() {\n  loadLayoutSources();
   wsConnect();
   $("open-settings").addEventListener("click", () => $("settings-modal").classList.remove("hidden"));
   $("close-settings").addEventListener("click", () => $("settings-modal").classList.add("hidden"));
   $("settings-modal").addEventListener("click", (event) => { if (event.target === $("settings-modal")) $("settings-modal").classList.add("hidden"); });
   $("connect-obs").addEventListener("click", connectObs);
-  $("disconnect-obs").addEventListener("click", disconnectObs);
+  $("disconnect-obs").addEventListener("click", disconnectObs);\n  $("portrait-source").addEventListener("input", saveLayoutSources);\n  $("landscape-source").addEventListener("input", saveLayoutSources);\n  $("slide-layout").addEventListener("change", (event) => setSlideLayout(event.target.value));\n  $("notes-editor").addEventListener("input", (event) => { const slide = state.slides[state.active]; if (!slide) return; slide.notes = event.target.value; slide.layout = layoutFromNotes(slide.notes); $("slide-layout").value = slide.layout; $("notes-save-status").textContent = "Unsaved changes"; $("save-notes").disabled = false; renderActions(slide); });\n  $("save-notes").addEventListener("click", saveNotesToBrowser);
   $("previous-button").addEventListener("click", () => goTo(state.active - 1, true));
   $("next-button").addEventListener("click", () => goTo(state.active + 1, true));
   $("present-button").addEventListener("click", openOutput);
