@@ -11,6 +11,7 @@ const clients = new Map();
 let obs = null;
 let obsReady = false;
 let obsPassword = "";
+let currentSlide = null;
 let requestCounter = 0;
 const pending = new Map();
 
@@ -146,6 +147,10 @@ async function runCommands(commands) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://" + HOST + ":" + PORT);
   if (req.method === "GET" && (url.pathname === "/api/health")) return json(res, 200, { ok: true, obsConnected: obsReady });
+  if (req.method === "POST" && url.pathname === "/api/obs/disconnect") {
+    closeObs();
+    return json(res, 200, { ok: true, connected: false });
+  }
   if (req.method === "GET" && (url.pathname === "/api/next" || url.pathname === "/api/previous")) {
     broadcast({ type: "navigate", delta: url.pathname.endsWith("/next") ? 1 : -1 }, "control");
     return json(res, 200, { ok: true, action: url.pathname.endsWith("/next") ? "next" : "previous" });
@@ -190,10 +195,14 @@ wss.on("connection", (socket, req) => {
   const role = url.searchParams.get("role") === "output" ? "output" : "control";
   clients.set(socket, role);
   socket.send(JSON.stringify({ type: "obsStatus", connected: obsReady }));
+  if (role === "output" && currentSlide) socket.send(JSON.stringify({ type: "slideState", slide: currentSlide }));
   socket.on("message", (raw) => {
     let message;
     try { message = JSON.parse(raw.toString()); } catch (_) { return; }
-    if (role === "control" && message.type === "slideState") broadcast({ type: "slideState", slide: message.slide }, "output");
+    if (role === "control" && message.type === "slideState") {
+      currentSlide = message.slide;
+      broadcast({ type: "slideState", slide: currentSlide }, "output");
+    }
     if (role === "control" && message.type === "obsStatusRequest") socket.send(JSON.stringify({ type: "obsStatus", connected: obsReady }));
   });
   socket.on("close", () => clients.delete(socket));
