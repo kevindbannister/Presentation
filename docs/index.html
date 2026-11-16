@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>Presentation — OBS control</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+  <main id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">P</span><span><strong>Presentation</strong><small>OBS show control</small></span></div>
+      <div class="top-actions">
+        <div class="status-pill"><i id="obs-dot"></i><span id="obs-status">OBS disconnected</span></div>
+        <button class="button button-quiet" id="open-settings" title="OBS connection settings">⚙ <span>Settings</span></button>
+        <button class="button button-primary" id="present-button" disabled>▶ <span>Present</span></button>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="side-heading"><span>SHOW</span><button class="icon-button" id="new-show" title="New show">＋</button></div>
+        <div class="show-card">
+          <div class="show-icon">▤</div>
+          <div class="show-info"><strong id="deck-title">Untitled show</strong><span id="slide-count">No slides yet</span></div>
+          <button class="icon-button" id="rename-show" title="Rename show">···</button>
+        </div>
+        <div class="side-heading slides-heading"><span>SLIDES</span><span id="slide-count-small">0</span></div>
+        <div id="slide-list" class="slide-list">
+          <div class="empty-slides"><span>＋</span><strong>Import a PowerPoint</strong><small>Your slide notes will be read for OBS commands.</small></div>
+        </div>
+        <div class="sidebar-bottom">
+          <label class="button button-outline import-button">＋ Import PowerPoint<input id="pptx-file" type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" hidden></label>
+          <div class="privacy-note"><span>●</span> Files stay on this computer</div>
+        </div>
+      </aside>
+
+      <section class="work-area">
+        <div class="toolbar">
+          <div class="breadcrumb"><span>Show</span><b>/</b><strong id="active-slide-label">No slide selected</strong></div>
+          <div class="toolbar-actions"><button id="previous-button" class="button button-quiet" disabled>← <span>Previous</span></button><span class="slide-position" id="slide-position">0 / 0</span><button id="next-button" class="button button-quiet" disabled><span>Next</span> →</button></div>
+        </div>
+        <div class="stage-area">
+          <div class="stage-frame" id="stage-frame">
+            <div class="stage-empty" id="stage-empty"><div class="empty-icon">▧</div><h2>Your presentation appears here</h2><p>Import a PowerPoint to preview your slides and check their OBS actions.</p><label class="button button-primary">Import PowerPoint<input id="empty-file" type="file" accept=".pptx" hidden></label></div>
+            <div class="slide-design" id="slide-design"></div>
+            <div class="stage-badge"><span id="stage-ratio">16:9</span><span>PREVIEW</span></div>
+          </div>
+        </div>
+        <div class="bottom-bar">
+          <div class="keyboard-hint"><kbd>←</kbd><kbd>→</kbd> <span>navigate</span><kbd>Space</kbd> <span>present</span></div>
+          <div class="bottom-actions"><span id="command-count" class="command-count">No OBS actions</span><button id="test-slide-actions" class="button button-outline" disabled>Test slide actions</button></div>
+        </div>
+      </section>
+
+      <aside class="inspector">
+        <div class="inspector-tabs"><button class="tab active" data-tab="slide">Slide</button><button class="tab" data-tab="actions">OBS actions <span id="action-badge">0</span></button></div>
+        <div id="tab-slide" class="inspector-content">
+          <div class="inspector-section">
+            <div class="section-title"><span>UP NEXT</span><span id="next-label">—</span></div>
+            <div class="next-preview" id="next-preview"><div class="next-placeholder">No next slide</div></div>
+          </div>
+          <div class="inspector-section notes-section">
+            <div class="section-title"><span>SPEAKER NOTES</span><span class="muted-label">From PowerPoint</span></div>
+            <div id="notes-content" class="notes-content">Import a PowerPoint to view its slide notes.</div>
+          </div>
+          <div class="inspector-section">
+            <div class="section-title"><span>OUTPUT</span><span class="live-label"><i></i> OBS source</span></div>
+            <div class="output-info"><strong>Presentation Output</strong><code>http://127.0.0.1:5175/output</code><button id="copy-output" class="text-button">Copy URL</button></div>
+          </div>
+        </div>
+        <div id="tab-actions" class="inspector-content hidden">
+          <div class="section-title"><span>COMMANDS ON THIS SLIDE</span></div>
+          <p class="help-copy">Add these lines to the slide’s PowerPoint notes. Multiple commands can run when the slide appears.</p>
+          <div id="actions-list" class="actions-list"><div class="no-actions">No # commands on this slide.</div></div>
+          <div class="code-examples"><strong>Supported commands</strong><code>#scene: Scene Name</code><code>#source.show: Source Name</code><code>#source.hide: Source Name</code></div>
+          <button id="run-actions" class="button button-primary full-button" disabled>Run slide commands</button>
+          <div id="action-result" class="action-result"></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="modal-backdrop hidden" id="settings-modal">
+      <div class="modal">
+        <div class="modal-head"><div><span class="eyebrow">CONNECTION</span><h2>Connect to OBS</h2></div><button class="icon-button" id="close-settings">×</button></div>
+        <p>Presentation connects to OBS on this computer. In OBS, open <b>Tools → WebSocket Server Settings</b> and enable the server.</p>
+        <label class="field-label">WebSocket address<input id="obs-address" value="ws://127.0.0.1:4455" autocomplete="off"></label>
+        <label class="field-label">Server password<input id="obs-password" type="password" autocomplete="current-password" placeholder="OBS WebSocket password"></label>
+        <div class="modal-note">The password is kept in memory for this session and is not saved by the app.</div>
+        <div class="modal-actions"><button id="disconnect-obs" class="button button-quiet">Disconnect</button><button id="connect-obs" class="button button-primary">Connect OBS</button></div>
+        <div id="connection-message" class="connection-message"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div id="output-mode" class="output-mode hidden"><div class="output-slide" id="output-slide"></div><div class="output-empty">Waiting for the presentation controller…</div></div>
+  </main>
+  <script>window.PRESENTATION_STATIC_SITE = true;</script>\n  <script src="app.js"></script>
+</body>
+</html>
