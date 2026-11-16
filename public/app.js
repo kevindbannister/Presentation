@@ -282,8 +282,7 @@ async function importPowerPoint(file) {
     const relFile = zip.file(slidePath.replace("slides/", "slides/_rels/") + ".rels");
     const slideRels = relFile ? relationshipMap(await relFile.async("text")) : {};
     const rendered = await renderSlide(zip, slidePath, width, height, slideRels);
-    const notePath = Object.keys(noteMap).find((candidate) => candidate.endsWith("/slide" + (i + 1) + ".xml"));
-    const notes = notePath ? noteMap[notePath] : "";
+    const notes = noteMap[slidePath] || "";
     const title = (rendered.previewText || "").split(/\s+/).slice(0, 5).join(" ");
     state.slides.push({ title, html: rendered.html, background: rendered.background, width, height, notes, previewText: rendered.previewText, firstImage: rendered.firstImage });
   }
@@ -298,6 +297,7 @@ function openOutput() {
   state.outputWindow = window.open(url, "presentationOutput");
   if (!state.outputWindow) toast("Allow pop-ups to open the presentation output.");
   setTimeout(sendSlideState, 400);
+  runCommands();
 }
 async function connectObs() {
   const address = $("obs-address").value.trim() || "ws://127.0.0.1:4455";
@@ -369,7 +369,6 @@ function setup() {
   };
   fileInput.addEventListener("change", handleFile);
   emptyInput.addEventListener("change", handleFile);
-  document.querySelector(".stage-empty label").addEventListener("click", () => emptyInput.click());
   document.addEventListener("keydown", (event) => {
     if (event.target && ["INPUT", "TEXTAREA"].includes(event.target.tagName)) return;
     if (event.key === "ArrowRight") { event.preventDefault(); goTo(state.active + 1, true); }
