@@ -206,14 +206,28 @@ async function renderSlide(zip, slidePath, width, height, slideRelationships) {
   const bgNode = elements(doc, pNs, "bg")[0];
   const bgColor = firstColor(bgNode) || "#ffffff";
   const spTree = elements(doc, pNs, "spTree")[0];
-  const nodes = spTree ? Array.from(spTree.children) : [];
+  const nodes = [];
+  const collectShapes = (parent) => {
+    Array.from(parent.children || []).forEach((node) => {
+      if (node.localName === "sp" || node.localName === "pic") nodes.push(node);
+      else if (node.localName === "grpSp") collectShapes(node);
+    });
+  };
+  if (spTree) collectShapes(spTree);
   const markup = [];
+  const unpositionedText = [];
   let previewText = "";
   let firstImage = "";
+  let positionedTextCount = 0;
   for (const shape of nodes) {
-    if (!shape.namespaceURI || shape.localName === "nvGrpSpPr" || shape.localName === "grpSpPr") continue;
+    const textBody = shape.localName === "sp" ? child(shape, pNs, "txBody") : null;
+    const lines = textBody ? elements(textBody, aNs, "p").map((para) => elements(para, aNs, "t").map((t) => t.textContent || "").join("")) : [];
+    const text = lines.join("\n").trim();
     const transform = shapeTransform(shape);
-    if (!transform || !transform.w || !transform.h) continue;
+    if (!transform || !transform.w || !transform.h) {
+      if (text) unpositionedText.push(text);
+      continue;
+    }
     const spPr = child(shape, pNs, "spPr");
     const fill = firstColor(spPr && elements(spPr, aNs, "solidFill")[0]);
     if (shape.localName === "pic") {
@@ -228,16 +242,12 @@ async function renderSlide(zip, slidePath, width, height, slideRelationships) {
       }
       continue;
     }
-    if (shape.localName !== "sp") continue;
-    const textBody = child(shape, pNs, "txBody");
     if (!textBody) {
       if (fill) markup.push('<div class="shape" style="' + styleShape(shape, transform, width, height, fill, null, 0, "left") + '"></div>');
       continue;
     }
-    const paras = elements(textBody, aNs, "p");
-    const lines = paras.map((para) => elements(para, aNs, "t").map((t) => t.textContent || "").join(""));
-    const text = lines.join("\n").trim();
     if (!text) continue;
+    positionedTextCount++;
     if (!previewText) previewText = text.replace(/\s+/g, " ");
     const runProps = elements(textBody, aNs, "rPr")[0] || elements(textBody, aNs, "defRPr")[0];
     const textColor = firstColor(runProps && elements(runProps, aNs, "solidFill")[0]);
@@ -246,6 +256,11 @@ async function renderSlide(zip, slidePath, width, height, slideRelationships) {
     const alignCode = pPr && pPr.getAttribute("algn");
     const align = ({ ctr: "center", r: "right", just: "justify" })[alignCode] || "left";
     markup.push('<div class="shape" style="' + styleShape(shape, transform, width, height, fill, textColor, fontSize, align) + '">' + escapeHtml(text) + "</div>");
+  }
+  const fallbackText = unpositionedText.length ? unpositionedText.join("\n") : (positionedTextCount === 0 ? elements(doc, aNs, "t").map((item) => item.textContent || "").join(" ").trim() : "");
+  if (fallbackText) {
+    if (!previewText) previewText = fallbackText.replace(/\s+/g, " ");
+    markup.push('<div class="shape" style="left:7%;top:8%;width:86%;height:84%;font-size:2.4cqw;line-height:1.3;white-space:pre-wrap;overflow:auto;color:#202838;">' + escapeHtml(fallbackText) + "</div>");
   }
   return { html: markup.join(""), background: bgColor, previewText, firstImage };
 }
